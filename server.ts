@@ -64,7 +64,7 @@ async function handle(req: Request, s: Session): Promise<Response> {
   if (route === "PUT /api/quote") {
     const { eventId, qty } = (await req.json()) as { eventId?: string; qty?: number };
     if (eventId && EVENTS.some((e) => e.id === eventId)) s.eventId = eventId;
-    if (qty !== undefined) s.qty = Math.max(1, Math.floor(qty));
+    if (qty !== undefined) s.qty = Math.min(10, Math.max(1, Math.floor(qty)));
     return json(quote(s));
   }
   if (route === "POST /api/promo") {
@@ -124,7 +124,7 @@ const PAGE = `<!doctype html>
 <h1>Buy tickets</h1>
 <div class="card">
   <div class="row"><label for="event">Event</label><select id="event"></select></div>
-  <div class="row"><label for="qty">Tickets</label><input id="qty" type="number" min="1" value="1" style="width:90px"></div>
+  <div class="row"><label for="qty">Tickets</label><input id="qty" type="number" min="1" max="10" value="1" style="width:90px"></div>
 </div>
 <form id="promo" class="row">
   <input id="code" placeholder="Promo code" aria-label="Promo code" style="flex:1">

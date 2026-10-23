@@ -314,9 +314,15 @@ async function replayAll(browser, job, runs) {
 
 // ---------- bisect ----------
 
-/** Classify one commit's runs the way git bisect needs: the bug showed, it didn't, or we can't tell. */
-export function classify(runs) {
+/**
+ * Classify one commit's runs the way git bisect needs: the bug showed, it didn't, or we can't tell.
+ * `signature` holds the errors every reproducing run showed (e.g. "GET /api/notes returned 500").
+ * When there is one, it decides: an old commit can fail the check for unrelated reasons (the
+ * text it looks for didn't exist yet), and that isn't this bug.
+ */
+export function classify(runs, signature = []) {
   if (!runs.length || runs.some((r) => !r.ok)) return "skip";
+  if (signature.length) return runs.some((r) => (r.errors ?? []).some((e) => signature.includes(e))) ? "bad" : "good";
   return runs.some((r) => r.check && !r.check.passed) ? "bad" : "good";
 }
 
@@ -336,7 +342,7 @@ async function bisect(browser, job) {
     const [full, message, author, date] = git("show", "-s", "--format=%H%x1f%s%x1f%an%x1f%aI", sha).trim().split("\x1f");
     return { sha: full, message, author, date };
   };
-  const { good, bad, runsPerCommit = 2, maxSteps = 12 } = job.bisect;
+  const { good, bad, runsPerCommit = 2, maxSteps = 12, signature = [] } = job.bisect;
   const steps = [];
 
   const test = async (sha, label) => {
@@ -348,7 +354,7 @@ async function bisect(browser, job) {
       return "skip";
     }
     try {
-      const result = classify(await replayAll(browser, job, runsPerCommit));
+      const result = classify(await replayAll(browser, job, runsPerCommit), signature);
       steps.push({ sha, result });
       return result;
     } finally {

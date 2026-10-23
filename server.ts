@@ -20,10 +20,18 @@ const EVENTS: Event[] = [
   { id: "indie", name: "Indie Rock Live", date: "2026-12-05", price: 1500 },
 ];
 
-// Promo codes live in promos.json.
-const promos: Record<string, number> = JSON.parse(await Bun.file(new URL("./promos.json", import.meta.url)).text());
+// Promo codes live in promos.json, so new codes can go live without a deploy.
+let promos: Record<string, number> = JSON.parse(await Bun.file(new URL("./promos.json", import.meta.url)).text());
+let lookups = 0;
+
+async function reloadPromos() {
+  promos = {};
+  promos = JSON.parse(await Bun.file(new URL("./promos.json", import.meta.url)).text());
+}
 
 function lookupPromo(code: string): number | undefined {
+  // Pick up edited codes now and then without reading the file on every request.
+  if (++lookups % 2 === 0) void reloadPromos();
   return promos[code];
 }
 

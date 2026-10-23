@@ -1,0 +1,74 @@
+# Added by No Repro. Lets No Repro confirm reported bugs by replaying them in a browser
+# on this repo's own runner, with this repo's own secrets. No Repro starts this workflow with a
+# plan (browser steps + one check). The runner installs and starts the app (once, or once per
+# commit when finding the commit that introduced a bug with git bisect) and uploads the result.
+name: No Repro
+run-name: "No Repro · issue #${{ inputs.issue }} · ${{ inputs.ref }}"
+
+on:
+  workflow_dispatch:
+    inputs:
+      issue:
+        description: Issue number
+        required: true
+      ref:
+        description: No Repro run id
+        required: true
+      job:
+        description: Reproduction plan written by No Repro (base64 JSON)
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: norepro-${{ inputs.issue }}
+  cancel-in-progress: false
+
+jobs:
+  reproduce:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # full history, for git bisect
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Set up browser
+        run: |
+          mkdir -p "$RUNNER_TEMP/norepro"
+          cp .github/norepro/runner.mjs "$RUNNER_TEMP/norepro/"
+          cd "$RUNNER_TEMP/norepro"
+          npm init -y > /dev/null
+          npm install --no-audit --no-fund playwright@1.64.1
+          npx playwright install --with-deps chromium
+
+      - name: Reproduce
+        working-directory: ${{ runner.temp }}/norepro
+        env:
+          # Passed through env, never pasted into the script, so the plan can't inject shell.
+          JOB: ${{ inputs.job }}
+          NOREPRO_APP_DIR: ${{ github.workspace }}
+          NOREPRO_APP_LOG: ${{ runner.temp }}/norepro/app.log
+          NOREPRO_INSTALL: "bun install"
+          NOREPRO_START: "bun run dev"
+          NOREPRO_READY_URL: "http://localhost:3000/health"
+          PORT: "3000"
+          # What the app needs to start. The values stay in this repo's secrets.
+        run: |
+          echo "$JOB" | base64 -d > job.json
+          node runner.mjs job.json result.json || true
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: norepro-result
+          path: |
+            ${{ runner.temp }}/norepro/result.json
+            ${{ runner.temp }}/norepro/app.log
+          if-no-files-found: ignore
+          retention-days: 7

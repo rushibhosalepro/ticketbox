@@ -1,0 +1,16 @@
+# Tells No Repro about this app. Optional, but it helps the agent match reports to pages.
+app:
+  name: TicketBox
+  description: Buy event tickets. Pick an event and how many tickets, apply a promo code, see the total, buy.
+  start: bun run dev
+  baseUrl: http://localhost:3000
+  ready: /health
+  reset: POST /__reset
+  pages:
+    - path: /
+      description: Checkout with the event picker, ticket count, promo code field with an Apply button, subtotal, discount, total and the Buy tickets button
+
+# Lets No Repro replay bugs on this repo's own GitHub Actions runner.
+run:
+  install: bun install
+  env: []

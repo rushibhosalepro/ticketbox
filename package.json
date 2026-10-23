@@ -1,0 +1,12 @@
+{
+  "name": "ticketbox",
+  "version": "1.0.0",
+  "description": "Buy event tickets, with promo codes.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "bun server.ts",
+    "start": "bun server.ts"
+  },
+  "dependencies": {}
+}

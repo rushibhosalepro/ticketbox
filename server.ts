@@ -173,7 +173,7 @@ document.getElementById("promo").addEventListener("submit", async e => {
 });
 document.getElementById("buy").addEventListener("click", async () => {
   const r = await api("/api/orders", { method: "POST" });
-  msg("Order #" + r.data.id + " confirmed");
+  msg("Order #" + r.data.id + " confirmed: " + rupees(r.data.total));
 });
 </script>
 </body>
